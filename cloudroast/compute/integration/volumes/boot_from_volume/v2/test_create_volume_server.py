@@ -18,6 +18,7 @@ import base64
 
 from cafe.drivers.unittest.decorators import tags
 from cloudcafe.common.tools.datagen import rand_name
+from cloudcafe.compute.common.types import NovaServerStatusTypes
 from cloudcafe.blockstorage.volumes_api.v1.models import statuses
 
 from cloudroast.compute.fixtures import ServerFromVolumeV2Fixture
@@ -37,7 +38,7 @@ class CreateVolumeServerTest(object):
             timeout=self.volume_create_timeout)
         self.resources.add(self.volume.id_,
                            self.blockstorage_client.delete_volume)
-        self.device = '/dev/xvdm'
+        self.device = '/dev/vdb'
         self.mount_directory = '/mnt/test'
         self.filesystem_type = 'ext3'
         # Verify that a volume can be attached to a server
@@ -84,6 +85,7 @@ class ServerFromVolumeV2CreateServerTests(ServerFromVolumeV2Fixture,
                 [cls.servers_config.default_file_path, 'test.txt'])
             files = [{'path': cls.file_path, 'contents': base64.b64encode(
                 cls.file_contents)}]
+            security_groups=[{'name': cls.security_groups_config.default_security_group}]
         cls.key = cls.keypairs_client.create_keypair(rand_name("key")).entity
         cls.resources.add(cls.key.name,
                           cls.keypairs_client.delete_keypair)
@@ -94,12 +96,18 @@ class ServerFromVolumeV2CreateServerTests(ServerFromVolumeV2Fixture,
             source_type='image', destination_type='volume',
             delete_on_termination=True)
         # Creating Instance from Volume V2
-        cls.create_resp = cls.volume_server_behaviors.create_active_server(
+        cls.create_resp = cls.boot_from_volume_client.create_server(
             name=cls.name, flavor_ref=cls.flavors_config.primary_flavor,
             metadata=cls.metadata, personality=files, key_name=cls.key.name,
-            networks=networks, block_device=cls.block_data)
-        cls.server = cls.create_resp.entity
-        cls.resources.add(cls.server.id,
+            networks=networks, block_device_mapping_v2=cls.block_data,
+            security_groups=security_groups)
+        created_server = cls.create_resp.entity
+        cls.resources.add(created_server.id,
                           cls.servers_client.delete_server)
+        wait_response = cls.server_behaviors.wait_for_server_status(
+            created_server.id, NovaServerStatusTypes.ACTIVE)
+        cls.server_behaviors._create_and_assign_floating_ip(created_server.id)
+        wait_response.entity.admin_pass = created_server.admin_pass
         cls.flavor = cls.flavors_client.get_flavor_details(
             cls.flavor_ref).entity
+        cls.server = wait_response.entity

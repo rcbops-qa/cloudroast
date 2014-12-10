@@ -35,7 +35,7 @@ class CreateServerVolumeIntegrationTest(BlockstorageIntegrationFixture):
     @classmethod
     def setUpClass(cls):
         super(CreateServerVolumeIntegrationTest, cls).setUpClass()
-        cls.server = cls.server_behaviors.create_active_server().entity
+        cls.server = cls.server_behaviors.create_active_server(key_name=cls.key.name).entity
         cls.resources.add(cls.server.id,
                           cls.servers_client.delete_server)
         cls.volume = cls.blockstorage_behavior.create_available_volume(
@@ -44,7 +44,7 @@ class CreateServerVolumeIntegrationTest(BlockstorageIntegrationFixture):
             timeout=cls.volume_create_timeout)
         cls.resources.add(cls.volume.id_,
                           cls.blockstorage_client.delete_volume)
-        cls.device = '/dev/xvdm'
+        cls.device = '/dev/vdb'
         cls.mount_directory = '/mnt/test'
         cls.filesystem_type = 'ext3'
 
@@ -70,7 +70,7 @@ class CreateServerVolumeIntegrationTest(BlockstorageIntegrationFixture):
     def test_format_and_mount_volume(self):
         """Verify that the volume can be formatted and mounted."""
         remote_client = self.server_behaviors.get_remote_instance_client(
-            self.server, self.servers_config)
+            self.server, self.servers_config, key=self.key.private_key)
         disks = remote_client.get_all_disks()
         self.assertIn(self.device, disks.keys())
         self.assertEqual(disks.get(self.device), self.volume_size)

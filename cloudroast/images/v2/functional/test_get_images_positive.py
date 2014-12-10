@@ -1,5 +1,5 @@
 """
-Copyright 2014 Rackspace
+Copyright 2013 Rackspace
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,15 +17,14 @@ limitations under the License.
 from cafe.drivers.unittest.decorators import tags
 from cloudcafe.common.tools.datagen import rand_name
 from cloudcafe.images.common.types import ImageVisibility
-
 from cloudroast.images.fixtures import ComputeIntegrationFixture
 
 
-class TestGetImagesPositive(ComputeIntegrationFixture):
+class TestGetImages(ComputeIntegrationFixture):
 
     @classmethod
     def setUpClass(cls):
-        super(TestGetImagesPositive, cls).setUpClass()
+        super(TestGetImages, cls).setUpClass()
         cls.image_name = rand_name('get_image')
         cls.images = cls.images_behavior.create_images_via_task(
             count=2, image_properties={'name': cls.image_name})
@@ -46,16 +45,16 @@ class TestGetImagesPositive(ComputeIntegrationFixture):
         7) Verify that the previously returned image is not in the current list
         """
 
+        owner = self.tenant_id
         response = self.images_client.list_images(
-            filters={"limit": 1, "name": self.image_name,
-                     "owner": self.tenant_id})
+            filters={"limit": 1, "name": self.image_name, "owner": owner})
         self.assertEqual(response.status_code, 200)
         image_list = response.entity
         self.assertEqual(len(image_list), 1)
         marker = image_list[0].id_
         response = self.images_client.list_images(
             filters={"limit": 1, "marker": marker, "name": self.image_name,
-                     "owner": self.tenant_id})
+                     "owner": owner})
         self.assertEqual(response.status_code, 200)
         next_image_list = response.entity
         self.assertEqual(len(next_image_list), 1)

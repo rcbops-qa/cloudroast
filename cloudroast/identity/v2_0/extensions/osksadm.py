@@ -44,6 +44,7 @@ class BaseOSKSADMApiSmoke(object):
             self.addCleanup(self.admin_behaviors.delete_user, user.id_)
         self.assertEqual(r.status_code, self.DELETE_STATUS_CODE)
 
+    @unittest.skip("Global roles not implemented")
     def test_get_global_roles_for_user(self):
         r = self.client.get_user_global_roles(user_id=self.static_user.id_)
         if r.ok:
@@ -52,6 +53,7 @@ class BaseOSKSADMApiSmoke(object):
         if r.ok:
             self.assertIsNotNone(r.entity, "Invalid body in response")
 
+    @unittest.skip("Global roles not implemented")
     def test_add_global_role_to_user(self):
         r = self.client.add_global_role_to_user(
             self.static_user.id_, self.static_role.id_)
@@ -114,6 +116,7 @@ class BaseOSKSADMApiSmoke(object):
 
         self.assertEqual(r.status_code, self.DELETE_STATUS_CODE)
 
+    @unittest.skip("No longer supported.")
     def test_get_role_by_name(self):
         name = self.static_role.name
         r = self.client.get_role_by_name(name)
@@ -161,13 +164,6 @@ class BaseOSKSADMApiSmoke(object):
             self.assertIsNotNone(r.entity, "Invalid body in response")
             self.addCleanup(self.admin_behaviors.delete_service, r.entity.id_)
         self.assertEqual(r.status_code, self.CREATE_STATUS_CODE)
-
-    def test_get_service_by_name(self):
-        name = self.static_service.name
-        r = self.client.get_service_by_name(name)
-        if r.ok:
-            self.assertIsNotNone(r.entity, "Invalid body in response")
-        self.assertEqual(r.status_code, self.GET_STATUS_CODE)
 
     def test_get_service_by_id(self):
         r = self.client.get_service_by_id(self.static_service.id_)

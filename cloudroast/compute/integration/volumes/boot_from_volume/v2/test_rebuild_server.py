@@ -17,7 +17,7 @@ limitations under the License.
 from cafe.drivers.unittest.decorators import tags
 
 from cloudcafe.common.tools.datagen import rand_name
-
+from cloudcafe.compute.common.types import NovaServerStatusTypes
 from cloudroast.compute.instance_actions.api.test_rebuild_server \
     import RebuildServerTests, RebuildBaseFixture
 from cloudroast.compute.fixtures import ServerFromVolumeV2Fixture
@@ -33,8 +33,12 @@ class ServerFromVolumeV2RebuildTests(ServerFromVolumeV2Fixture,
         cls.key = cls.keypairs_client.create_keypair(rand_name("key")).entity
         cls.resources.add(cls.key.name,
                           cls.keypairs_client.delete_keypair)
-        cls.create_server(key_name=cls.key.name)
+        created_server = cls.create_server(key_name=cls.key.name)
         response = cls.flavors_client.get_flavor_details(cls.flavor_ref)
+        wait_response = cls.server_behaviors.wait_for_server_status(
+            created_server.id, NovaServerStatusTypes.ACTIVE)
+        cls.server_behaviors._create_and_assign_floating_ip(created_server.id)
+
         cls.flavor = response.entity
         cls.rebuild_and_await()
 

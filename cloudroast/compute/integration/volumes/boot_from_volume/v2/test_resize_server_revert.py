@@ -23,7 +23,7 @@ from cloudroast.compute.instance_actions.api.test_resize_server_revert \
 from cloudroast.compute.fixtures import ServerFromVolumeV2Fixture
 
 
-@unittest.skip('Resize not enabled for boot from volume')
+@unittest.skip('Resize down not enabled for KVM')
 class ServerFromVolumeV2ResizeRevertTests(ServerFromVolumeV2Fixture,
                                           ResizeServerUpRevertTests,
                                           ResizeUpRevertBaseFixture):

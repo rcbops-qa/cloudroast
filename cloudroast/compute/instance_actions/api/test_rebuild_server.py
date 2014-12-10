@@ -114,7 +114,6 @@ class RebuildServerTests(object):
     @tags(type='smoke', net='yes')
     def test_rebuilt_server_vcpus(self):
         """Verify the number of vCPUs reported is the correct after rebuild"""
-
         remote_client = self.server_behaviors.get_remote_instance_client(
             self.server, config=self.servers_config, password=self.password,
             key=self.key.private_key)
@@ -247,20 +246,6 @@ class RebuildServerTests(object):
         self.assertEqual(auto_config_enabled,
                          actual_disk_config.lower() == 'auto')
 
-    @tags(type='smoke', net='yes')
-    def test_distro_after_rebuild(self):
-        """Verify the distro is changed if using rebuild with different image"""
-        remote_client = self.server_behaviors.get_remote_instance_client(
-            self.server, self.servers_config, password=self.password,
-            key=self.key.private_key)
-        distro_after_rebuild = remote_client.get_distribution_and_version()
-        if (self.distro_before_rebuild and
-                distro_after_rebuild and
-                self.image_ref != self.image_ref_alt):
-            self.assertNotEqual(self.distro_before_rebuild, distro_after_rebuild)
-        else:
-            self.assertEqual(self.distro_before_rebuild, distro_after_rebuild)
-
 
 class RebuildBaseFixture(object):
 
@@ -305,12 +290,11 @@ class ServerFromImageRebuildTests(ServerFromImageFixture,
         cls.key = cls.keypairs_client.create_keypair(rand_name("key")).entity
         cls.resources.add(cls.key.name,
                           cls.keypairs_client.delete_keypair)
-        cls.create_server(key_name=cls.key.name)
+        created_server = cls.create_server(key_name=cls.key.name)
+        wait_response = cls.server_behaviors.wait_for_server_status(
+            created_server.id, NovaServerStatusTypes.ACTIVE)
         response = cls.flavors_client.get_flavor_details(cls.flavor_ref)
         cls.flavor = response.entity
-        remote_client = cls.server_behaviors.get_remote_instance_client(
-            cls.server, cls.servers_config, key=cls.key.private_key)
-        cls.distro_before_rebuild = remote_client.get_distribution_and_version()
         cls.rebuild_and_await()
 
     @tags(type='smoke', net='yes')

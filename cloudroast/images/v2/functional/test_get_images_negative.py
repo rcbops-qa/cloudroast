@@ -1,5 +1,5 @@
 """
-Copyright 2014 Rackspace
+Copyright 2013 Rackspace
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@ limitations under the License.
 """
 
 from cafe.drivers.unittest.decorators import tags
-from cloudcafe.compute.common.exceptions import BadRequest
-
 from cloudroast.images.fixtures import ImagesFixture
 
 
@@ -31,5 +29,6 @@ class TestGetImagesNegative(ImagesFixture):
         2) Verify that the response code is 400
         """
 
-        with self.assertRaises(BadRequest):
-            self.images_client.list_images(filters={"sort_key": "schema"})
+        response = self.images_client.list_images(
+            filters={"sort_key": "schema"})
+        self.assertEquals(response.status_code, 400)

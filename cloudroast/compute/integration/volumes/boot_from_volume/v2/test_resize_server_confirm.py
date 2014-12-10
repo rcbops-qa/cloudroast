@@ -18,12 +18,13 @@ import unittest
 
 from cloudcafe.common.tools.datagen import rand_name
 
+from cloudcafe.compute.common.types import ComputeHypervisors, \
+            NovaServerStatusTypes
 from cloudroast.compute.instance_actions.api.test_resize_server_confirm \
     import ResizeServerUpConfirmTests, ResizeUpConfirmBaseFixture
 from cloudroast.compute.fixtures import ServerFromVolumeV2Fixture
 
 
-@unittest.skip('Resize not enabled for boot from volume')
 class ServerFromVolumeV2ResizeUpConfirmTests(ServerFromVolumeV2Fixture,
                                              ResizeServerUpConfirmTests,
                                              ResizeUpConfirmBaseFixture):
@@ -34,5 +35,8 @@ class ServerFromVolumeV2ResizeUpConfirmTests(ServerFromVolumeV2Fixture,
         cls.key = cls.keypairs_client.create_keypair(rand_name("key")).entity
         cls.resources.add(cls.key.name,
                           cls.keypairs_client.delete_keypair)
-        cls.create_server(key_name=cls.key.name)
+        created_server = cls.create_server(key_name=cls.key.name)
+        wait_response = cls.server_behaviors.wait_for_server_status(
+            created_server.id, NovaServerStatusTypes.ACTIVE)
+        cls.server_behaviors._create_and_assign_floating_ip(created_server.id)
         cls.resize_up_and_confirm()

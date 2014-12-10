@@ -1,3 +1,5 @@
+import unittest
+
 from cloudroast.identity.v2_0.fixtures import IdentityBaseTestFixture
 
 
@@ -17,6 +19,7 @@ class BaseIdentityServiceSmoke(object):
         if r.ok:
             self.assertIsNotNone(r.entity, "Invalid body in response")
 
+    @unittest.skip("No longer supported.")
     def test_get_tenant_by_name(self):
         tenant_name = self.identity.tenant_name
         r = self.identity.client.get_tenant_by_name(tenant_name)
@@ -54,6 +57,7 @@ class BaseIdentityServiceSmoke(object):
         if r.ok:
             self.assertIsNotNone(r.entity, "Invalid body in response")
 
+    @unittest.skip("No longer supported.")
     def test_get_roles_for_user(self):
         user_id = self.identity.user_id
         r = self.identity.client.get_user_global_roles(user_id)

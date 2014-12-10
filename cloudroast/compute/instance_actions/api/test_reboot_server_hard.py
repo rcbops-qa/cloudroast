@@ -50,4 +50,7 @@ class ServerFromImageRebootServerHardTests(ServerFromImageFixture,
         cls.key = cls.keypairs_client.create_keypair(rand_name("key")).entity
         cls.resources.add(cls.key.name,
                           cls.keypairs_client.delete_keypair)
-        cls.create_server(key_name=cls.key.name)
+        try:
+            cls.create_server(key_name=cls.key.name)
+        except:
+            import pdb; pdb.set_trace()

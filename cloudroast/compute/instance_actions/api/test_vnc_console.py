@@ -24,10 +24,10 @@ from cloudroast.compute.fixtures import ServerFromImageFixture
 
 compute_config = ComputeConfig()
 hypervisor = compute_config.hypervisor.lower()
-
+vnc_supported = compute_config.vnc_supported
 
 @unittest.skipIf(
-    hypervisor in [ComputeHypervisors.IRONIC],
+    not vnc_supported or hypervisor in [ComputeHypervisors.IRONIC],
     'Get VNC console not supported in current configuration.')
 class ServerVncConsoleTests(object):
 

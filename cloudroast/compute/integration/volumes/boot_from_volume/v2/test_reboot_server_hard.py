@@ -31,3 +31,4 @@ class ServerFromVolumeV2RebootHardTests(ServerFromVolumeV2Fixture,
         cls.resources.add(cls.key.name,
                           cls.keypairs_client.delete_keypair)
         cls.create_server(key_name=cls.key.name)
+        cls.server_behaviors._create_and_assign_floating_ip(cls.server.id)

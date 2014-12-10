@@ -18,7 +18,6 @@ import unittest
 
 from cafe.drivers.unittest.decorators import tags
 from cloudcafe.common.tools.datagen import rand_name
-from cloudcafe.compute.common.exceptions import Forbidden, ItemNotFound
 from cloudcafe.images.common.types import (
     ImageContainerFormat, ImageDiskFormat, ImageStatus, ImageVisibility)
 
@@ -48,9 +47,9 @@ class TestUpdateImageNegative(ImagesFixture):
 
         image = self.images.pop()
         updated_status = ImageStatus.ACTIVE
-        with self.assertRaises(Forbidden):
-            self.images_client.update_image(
-                image.id_, replace={'status': updated_status})
+        response = self.images_client.update_image(
+            image.id_, replace={'status': updated_status})
+        self.assertEqual(response.status_code, 403)
         response = self.images_client.get_image(image.id_)
         self.assertEqual(response.status_code, 200)
         get_image = response.entity
@@ -73,9 +72,9 @@ class TestUpdateImageNegative(ImagesFixture):
 
         image = self.images.pop()
         status = ImageStatus.ACTIVE
-        with self.assertRaises(Forbidden):
-            self.images_client.update_image(
-                image.id_, add={"status": status})
+        response = self.images_client.update_image(
+            image.id_, add={"status": status})
+        self.assertEqual(response.status_code, 403)
         response = self.images_client.get_image(image.id_)
         self.assertEqual(response.status_code, 200)
         get_image = response.entity
@@ -97,9 +96,9 @@ class TestUpdateImageNegative(ImagesFixture):
         """
 
         image = self.images.pop()
-        with self.assertRaises(Forbidden):
-            self.images_client.update_image(
-                image.id_, remove={'status': ImageStatus.QUEUED})
+        response = self.images_client.update_image(
+            image.id_, remove={'status': ImageStatus.QUEUED})
+        self.assertEqual(response.status_code, 403)
         response = self.images_client.get_image(image.id_)
         self.assertEqual(response.status_code, 200)
         get_image = response.entity
@@ -149,10 +148,9 @@ class TestUpdateImageNegative(ImagesFixture):
         active_image = response.entity
         self.assertEqual(active_image.status, ImageStatus.ACTIVE)
 
-        with self.assertRaises(Forbidden):
-            self.images_client.update_image(
-                image_id=active_image.id_,
-                replace={"location": updated_location})
+        response = self.images_client.update_image(
+            image_id=active_image.id_, replace={"location": updated_location})
+        self.assertEqual(response.status_code, 403)
 
         response = self.images_client.get_image(image_id=image.id_)
         self.assertEqual(response.status_code, 200)
@@ -176,10 +174,9 @@ class TestUpdateImageNegative(ImagesFixture):
         """
 
         image = self.images.pop()
-        with self.assertRaises(Forbidden):
-            self.images_client.update_image(
-                image.id_,
-                replace={'container_format': ImageContainerFormat.AKI})
+        response = self.images_client.update_image(
+            image.id_, replace={'container_format': ImageContainerFormat.AKI})
+        self.assertEqual(response.status_code, 403)
 
         response = self.images_client.get_image(image.id_)
         self.assertEqual(response.status_code, 200)
@@ -187,9 +184,9 @@ class TestUpdateImageNegative(ImagesFixture):
         self.assertNotEqual(
             get_image.container_format, ImageContainerFormat.AKI)
 
-        with self.assertRaises(Forbidden):
-            self.images_client.update_image(
-                image.id_, replace={'disk_format': ImageDiskFormat.ISO})
+        response = self.images_client.update_image(
+            image.id_, replace={'disk_format': ImageDiskFormat.ISO})
+        self.assertEqual(response.status_code, 403)
 
         response = self.images_client.get_image(image.id_)
         self.assertEqual(response.status_code, 200)
@@ -212,9 +209,9 @@ class TestUpdateImageNegative(ImagesFixture):
         """
 
         image = self.images.pop()
-        with self.assertRaises(Forbidden):
-            self.images_client.update_image(
-                image.id_, replace={'visibility': ImageVisibility.PUBLIC})
+        response = self.images_client.update_image(
+            image.id_, replace={'visibility': ImageVisibility.PUBLIC})
+        self.assertEqual(response.status_code, 403)
 
         images = self.images_behavior.list_images_pagination(
             visibility=ImageVisibility.PUBLIC)
@@ -226,6 +223,6 @@ class TestUpdateImageNegative(ImagesFixture):
         @summary: Update an image with a negative value expecting it to fail
         """
 
-        with self.assertRaises(ItemNotFound):
-            self.images_client.update_image(
-                image_id, add={'new_prop': rand_name('new_prop_value')})
+        response = self.images_client.update_image(
+            image_id, add={'new_prop': rand_name('new_prop_value')})
+        self.assertEqual(response.status_code, 404)

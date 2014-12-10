@@ -301,8 +301,10 @@ class ServerFromImageCreateServerTests(ServerFromImageFixture,
         created_server = cls.create_resp.entity
         cls.resources.add(created_server.id,
                           cls.servers_client.delete_server)
+        #if cls.config.auto_assign_floating_ip:
         wait_response = cls.server_behaviors.wait_for_server_status(
             created_server.id, NovaServerStatusTypes.ACTIVE)
+        cls.server_behaviors._create_and_assign_floating_ip(created_server.id)
         wait_response.entity.admin_pass = created_server.admin_pass
         cls.image = cls.images_client.get_image(cls.image_ref).entity
         cls.flavor = cls.flavors_client.get_flavor_details(

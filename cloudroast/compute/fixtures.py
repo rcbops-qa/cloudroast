@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import time
 import sys
 
 from cafe.drivers.unittest.fixtures import BaseTestFixture
@@ -26,7 +25,7 @@ from cloudcafe.compute.composites import ComputeComposite, \
 from cloudcafe.compute.common.exception_handler import ExceptionHandler
 from cloudcafe.compute.common.clients.ping import PingClient
 from cloudcafe.compute.common.exceptions import ServerUnreachable
-
+from cloudcafe.common.tools.datagen import rand_name
 
 class ComputeFixture(BaseTestFixture):
     """
@@ -222,12 +221,15 @@ class BlockstorageIntegrationFixture(ComputeFixture):
         volumes = cls.compute_integration.volumes
 
         cls.poll_frequency = volumes.config.volume_status_poll_frequency
-        cls.volume_size = int(volumes.config.min_volume_from_image_size)
+        cls.volume_size = int(volumes.config.min_volume_size)
         cls.volume_type = volumes.config.default_volume_type
         cls.volume_delete_timeout = volumes.config.volume_delete_max_timeout
         cls.volume_create_timeout = volumes.config.volume_create_max_timeout
         cls.blockstorage_client = volumes.client
         cls.blockstorage_behavior = volumes.behaviors
+        cls.key = cls.keypairs_client.create_keypair(rand_name("key")).entity
+        cls.resources.add(cls.key.name,
+                          cls.keypairs_client.delete_keypair)
 
 
 class ServerFromImageFixture(ComputeFixture):
@@ -268,25 +270,19 @@ class ServerFromVolumeV1Fixture(BlockstorageIntegrationFixture):
         @rtype: Request Response Object
         """
         # Creating a volume for the block device mapping
-        failures = []
-        attempts = cls.servers_config.resource_build_attempts
-        for attempt in range(attempts):
-            try:
-                cls.volume = cls.blockstorage_behavior.create_available_volume(
-                    size=cls.volume_size,
-                    volume_type=cls.volume_type,
-                    image_ref=cls.image_ref)
-            except Exception as ex:
-                if '507' in ex.message:
-                    time.sleep(cls.servers_config.server_status_interval)
-                failures.append(ex.message)
+        cls.volume = cls.blockstorage_behavior.create_available_volume(
+            size=cls.volume_size,
+            volume_type=cls.volume_type,
+            image_ref=cls.image_ref)
+        cls.resources.add(cls.volume.id_,
+                          cls.blockstorage_client.delete_volume)
         # Creating block device mapping used for server creation
         cls.block_device_mapping_matrix = [{
             "volume_id": cls.volume.id_,
             "delete_on_termination": True,
             "device_name": cls.images_config.primary_image_default_device,
             "size": cls.volume_size,
-            "type": ''}]
+            "type": cls.volume_type}]
         # Creating the Boot from Volume Version 1 Instance
         cls.server_response = cls.server_behaviors.create_active_server(
             block_device_mapping=cls.block_device_mapping_matrix,

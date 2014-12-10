@@ -1,5 +1,5 @@
 """
-Copyright 2014 Rackspace
+Copyright 2013 Rackspace
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,10 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import unittest
+import unittest2 as unittest
 
 from cafe.drivers.unittest.decorators import tags
-from cloudcafe.compute.common.exceptions import ItemNotFound
 from cloudcafe.images.config import ImagesConfig
 
 from cloudroast.images.fixtures import ImagesFixture
@@ -28,14 +27,14 @@ allow_put_image_file = images_config.allow_put_image_file
 allow_get_image_file = images_config.allow_get_image_file
 
 
-@unittest.skipUnless(allow_get_image_file, 'Endpoint has incorrect access')
 class GetImageFileNegativeTest(ImagesFixture):
 
     @classmethod
     def setUpClass(cls):
         super(GetImageFileNegativeTest, cls).setUpClass()
-        cls.images = cls.images_behavior.create_new_images(count=2)
+        cls.image = cls.images_behavior.create_new_image()
 
+    @unittest.skipUnless(allow_get_image_file, 'Endpoint has incorrect access')
     @tags(type='negative', regression='true', skipable='true')
     def test_get_image_file_using_blank_image_id(self):
         """
@@ -45,9 +44,10 @@ class GetImageFileNegativeTest(ImagesFixture):
         2) Verify that the response code is 404
         """
 
-        with self.assertRaises(ItemNotFound):
-            self.images_client.get_image_file(image_id="")
+        response = self.images_client.get_image_file(image_id="")
+        self.assertEqual(response.status_code, 404)
 
+    @unittest.skipUnless(allow_get_image_file, 'Endpoint has incorrect access')
     @tags(type='negative', regression='true', skipable='true')
     def test_get_image_file_using_invalid_image_id(self):
         """
@@ -57,9 +57,10 @@ class GetImageFileNegativeTest(ImagesFixture):
         2) Verify that the response code is 404
         """
 
-        with self.assertRaises(ItemNotFound):
-            self.images_client.get_image_file(image_id="invalid_id")
+        response = self.images_client.get_image_file(image_id="invalid_id")
+        self.assertEqual(response.status_code, 404)
 
+    @unittest.skipUnless(allow_get_image_file, 'Endpoint has incorrect access')
     @tags(type='negative', regression='true', skipable='true')
     def test_get_image_file_for_non_existent_file(self):
         """
@@ -70,13 +71,11 @@ class GetImageFileNegativeTest(ImagesFixture):
         2) Verify that the response code is 404
         """
 
-        image = self.images.pop()
-
-        response = self.images_client.get_image_file(image_id=image.id_)
+        response = self.images_client.get_image_file(image_id=self.image.id_)
         self.assertEqual(response.status_code, 204)
 
-    @unittest.skipUnless(allow_post_images and allow_put_image_file,
-                         'Endpoint has incorrect access')
+    @unittest.skipUnless(allow_post_images and allow_put_image_file and
+                         allow_get_image_file, 'Endpoint has incorrect access')
     @tags(type='negative', regression='true', skipable='true')
     def test_get_image_file_as_non_member_of_the_image(self):
         """
@@ -89,11 +88,11 @@ class GetImageFileNegativeTest(ImagesFixture):
         5) Verify that the response code is 404
         """
 
-        image = self.images.pop()
+        image = self.images_behavior.create_new_image()
 
         response = self.images_client.store_image_file(
             image.id_, self.test_file)
         self.assertEqual(response.status_code, 204)
 
-        with self.assertRaises(ItemNotFound):
-            self.alt_images_client.get_image_file(image_id=image.id_)
+        response = self.alt_images_client.get_image_file(image_id=image.id_)
+        self.assertEqual(response.status_code, 404)

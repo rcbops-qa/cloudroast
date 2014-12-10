@@ -61,6 +61,7 @@ class ResizeServerUpConfirmTests(object):
     @tags(type='smoke', net='yes')
     def test_resized_server_disk_size(self):
         """Verify the size of the virtual disk matches the new flavor"""
+        from IPython import embed; embed()
         remote_client = self.server_behaviors.get_remote_instance_client(
             self.server, config=self.servers_config, key=self.key.private_key)
         disk_size = remote_client.get_disk_size(
@@ -182,4 +183,7 @@ class ServerFromImageResizeServerUpConfirmTests(ServerFromImageFixture,
         cls.resources.add(cls.key.name,
                           cls.keypairs_client.delete_keypair)
         cls.create_server(key_name=cls.key.name)
+        wait_response = cls.server_behaviors.wait_for_server_status(
+            created_server.id, NovaServerStatusTypes.ACTIVE)
+        cls.server_behaviors._create_and_assign_floating_ip(created_server.id)
         cls.resize_up_and_confirm()

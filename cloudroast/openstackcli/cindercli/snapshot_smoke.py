@@ -1,32 +1,33 @@
-from cafe.drivers.unittest.decorators import (
-    DataDrivenFixture, data_driven_test)
-from cloudcafe.blockstorage.datasets import BlockstorageDatasets
-from cloudcafe.blockstorage.volumes_api.common.models.statuses import \
-    Snapshot as SnapshotStatuses
+from cafe.drivers.unittest.decorators import \
+    DataDrivenFixture, data_driven_test
 
-from cloudroast.blockstorage.volumes_api.integration.oscli.fixtures \
-    import CinderCLI_IntegrationFixture
+from cloudroast.openstackcli.cindercli.fixtures import \
+    CinderCLI_Datasets, CinderTestFixture
+
+from cloudcafe.blockstorage.volumes_api.v1.models.statuses import \
+    Snapshot as SnapshotStatuses
 
 
 @DataDrivenFixture
-class CinderCLI_SnapshotSmoke(CinderCLI_IntegrationFixture):
+class CinderCLI_SnapshotSmoke(CinderTestFixture):
 
-    @data_driven_test(BlockstorageDatasets.volume_types())
-    def ddtest_snapshot_create_and_delete(
-            self, volume_type_name, volume_type_id):
+    @data_driven_test(CinderCLI_Datasets.volume_types())
+    def ddtest_snapshot_create(self, volume_type_name, volume_type_id):
+        """Snapshots take a relative eternity to test compared to volumes.
+        To facilitate this smoke test running as quickly as possible,
+        it is a composite of logic that would normally be broken up into
+        several different tests."""
 
         # Setup
-        size = self.volumes.behaviors.get_configured_volume_type_property(
-            "min_size", id_=volume_type_id, name=volume_type_name)
-        volume = self.volumes.behaviors.create_available_volume(
-            size=size, volume_type=volume_type_id)
-        self.addCleanup(self.cinder.client.delete, volume.id_)
+        volume = self.cinder.cli.behaviors.create_available_volume(
+            type_=volume_type_id)
+        self.addCleanup(self.cinder.cli.client.delete_volume, volume.id_)
 
         # Test create response
         display_name = self.random_snapshot_name()
         display_description = "Snapshot_Description"
 
-        resp = self.cinder.client.snapshot_create(
+        resp = self.cinder.cli.client.create_snapshot(
             volume.id_, display_name=display_name,
             display_description=display_description)
 
@@ -42,9 +43,8 @@ class CinderCLI_SnapshotSmoke(CinderCLI_IntegrationFixture):
             snapshot.display_description, display_description,
             "Display description did not match expected display description")
         self.assertEquals(
-            str(snapshot.size), str(volume.size),
-            "Snapshot size '{0}' did not match source volume size '{1}'"
-            .format(snapshot.size, volume.size))
+            snapshot.size, volume.size,
+            "Size did not match source volume size")
         self.assertEquals(
             snapshot.volume_id, volume.id_,
             "Volume id did not match source volume id")
@@ -56,22 +56,17 @@ class CinderCLI_SnapshotSmoke(CinderCLI_IntegrationFixture):
 
         # Wait for snapshot to attain 'available' status
         snapshot_timeout = \
-            self.volumes.behaviors.calculate_snapshot_create_timeout(
+            self.cinder.api.behaviors.calculate_snapshot_create_timeout(
                 volume.size)
 
-        self.volumes.behaviors.wait_for_snapshot_status(
+        self.cinder.cli.behaviors.wait_for_snapshot_status(
             snapshot.id_, SnapshotStatuses.AVAILABLE, snapshot_timeout)
 
         # Make sure snapshot progress is at 100%
-        resp = self.cinder.client.snapshot_show(snapshot.id_)
+        resp = self.cinder.cli.client.show_snapshot(snapshot.id_)
         self.assertIsNotNone(
             resp.entity, 'Could not parse snapshot-show output')
         snapshot = resp.entity
         self.assertEquals(
             snapshot.progress, '100%',
             "Snapshot attained 'AVAILABLE' status, but progress is not 100%")
-
-        # Delete Snapshot
-        resp = self.cinder.client.snapshot_delete(snapshot.id_)
-        self.assertEquals(
-            resp.return_code, 0, 'Could not delete snapshot')

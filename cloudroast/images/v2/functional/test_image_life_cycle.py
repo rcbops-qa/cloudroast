@@ -1,5 +1,5 @@
 """
-Copyright 2014 Rackspace
+Copyright 2013 Rackspace
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,11 +17,10 @@ limitations under the License.
 import calendar
 import re
 import time
-import unittest
+import unittest2 as unittest
 
 from cafe.drivers.unittest.decorators import tags
 from cloudcafe.common.tools.datagen import rand_name
-from cloudcafe.compute.common.exceptions import ItemNotFound
 from cloudcafe.images.common.constants import ImageProperties
 from cloudcafe.images.common.types import (
     ImageContainerFormat, ImageDiskFormat, ImageStatus, ImageVisibility,
@@ -156,8 +155,8 @@ class TestImageLifeCycle(ImagesFixture):
         response = self.images_client.delete_image(image_resp.id_)
         self.assertEqual(response.status_code, 204)
 
-        with self.assertRaises(ItemNotFound):
-            self.images_client.get_image(image_resp.id_)
+        response = self.images_client.get_image(image_resp.id_)
+        self.assertEqual(response.status_code, 404)
 
         list_images_resp = self.images_behavior.list_images_pagination()
         self.assertNotIn(image_resp, list_images_resp)

@@ -22,12 +22,18 @@ specific tolerances.
 """
 
 import base64
+import unittest
 
 from cloudcafe.common.tools.datagen import rand_name
 from cloudroast.compute.fixtures import ComputeFixture
 from cloudcafe.compute.common.types import NovaServerStatusTypes
+from cloudcafe.compute.extensions.config_drive.config import ConfigDriveConfig
+
+config_drive_config = ConfigDriveConfig()
 
 
+@unittest.skipUnless(config_drive_config.supported,
+                   'Config drive not supported.')
 class ConfigDriveRebuildTest(ComputeFixture):
 
     @classmethod

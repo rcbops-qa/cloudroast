@@ -1,5 +1,5 @@
 """
-Copyright 2014 Rackspace
+Copyright 2013 Rackspace
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ from cafe.drivers.unittest.fixtures import BaseTestFixture
 from cloudcafe.auth.config import UserAuthConfig, UserConfig
 from cloudcafe.auth.provider import AuthProvider
 from cloudcafe.common.resources import ResourcePool
-from cloudcafe.compute.common.exception_handler import ExceptionHandler
 from cloudcafe.compute.config import ComputeEndpointConfig
 from cloudcafe.compute.flavors_api.config import FlavorsConfig
 from cloudcafe.compute.images_api.behaviors import (
@@ -45,7 +44,7 @@ from cloudcafe.objectstorage.objectstorage_api.config import (
 
 
 class ImagesFixture(BaseTestFixture):
-    """@summary: Fixture for Cloud Images api"""
+    """@summary: Fixture for images v2 api"""
 
     @classmethod
     def setUpClass(cls):
@@ -60,43 +59,83 @@ class ImagesFixture(BaseTestFixture):
         cls.serialize_format = cls.marshalling.serializer
         cls.deserialize_format = cls.marshalling.deserializer
 
-        cls.user_list = cls.generate_user_list(cls.images_config.account_list)
+        cls.access_data = AuthProvider.get_access_data(cls.endpoint_config,
+                                                       cls.user_config)
+        # If authentication fails, fail immediately
+        if cls.access_data is None:
+            cls.assertClassSetupFailure('Authentication failed')
 
-        cls.access_data = cls.user_list['user'][cls.ACCESS_DATA]
-        cls.alt_access_data = cls.user_list['alt_user'][cls.ACCESS_DATA]
-        cls.third_access_data = cls.user_list['third_user'][cls.ACCESS_DATA]
+        cls.alt_access_data = AuthProvider.get_access_data(cls.endpoint_config,
+                                                           cls.alt_user_config)
+        # If authentication fails, fail immediately
+        if cls.alt_access_data is None:
+            cls.assertClassSetupFailure('Authentication failed')
+        cls.third_access_data = AuthProvider.get_access_data(
+            cls.endpoint_config, cls.third_user_config)
+        # If authentication fails, fail immediately
+        if cls.third_access_data is None:
+            cls.assertClassSetupFailure('Authentication failed')
 
-        cls.images_client = cls.user_list['user'][cls.CLIENT]
-        cls.alt_images_client = cls.user_list['alt_user'][cls.CLIENT]
-        cls.third_images_client = cls.user_list['third_user'][cls.CLIENT]
+        images_service = cls.access_data.get_service(
+            cls.images_config.endpoint_name)
 
-        cls.images_behavior = cls.user_list['user'][cls.BEHAVIOR]
-        cls.alt_images_behavior = cls.user_list['alt_user'][cls.BEHAVIOR]
-        cls.third_images_behavior = cls.user_list['third_user'][cls.BEHAVIOR]
+        images_url_check = images_service.get_endpoint(
+            cls.images_config.region)
+        # If endpoint validation fails, fail immediately
+        if images_url_check is None:
+            cls.assertClassSetupFailure('Endpoint validation failed')
 
-        cls.tenant_id = cls.access_data.token.tenant.id_
+        cls.url = (images_service.get_endpoint(
+            cls.images_config.region).public_url)
+        # If a url override was provided, use it instead
+        if cls.images_config.override_url:
+            cls.url = cls.images_config.override_url
+
+        cls.images_client = cls.generate_images_client(cls.access_data)
+        cls.alt_images_client = cls.generate_images_client(cls.alt_access_data)
+        cls.third_images_client = cls.generate_images_client(
+            cls.third_access_data)
+
+        cls.images_behavior = ImagesBehaviors(
+            images_client=cls.images_client, images_config=cls.images_config)
+        cls.alt_images_behavior = ImagesBehaviors(
+            images_client=cls.alt_images_client,
+            images_config=cls.images_config)
+        cls.third_images_behavior = ImagesBehaviors(
+            images_client=cls.third_images_client,
+            images_config=cls.images_config)
+
         cls.alt_tenant_id = cls.alt_access_data.token.tenant.id_
-        cls.third_tenant_id = cls.third_access_data.token.tenant.id_
-        cls.full_access_tenant_id = cls.access_data.token.tenant.id_
-
         cls.error_msg = Messages.ERROR_MSG
+        cls.export_to = cls.images_config.export_to
         cls.id_regex = re.compile(ImageProperties.ID_REGEX)
         cls.import_from = cls.images_config.import_from
         cls.import_from_bootable = cls.images_config.import_from_bootable
         cls.import_from_format = cls.images_config.import_from_format
-        cls.export_to = cls.images_config.export_to
         cls.max_created_at_delta = cls.images_config.max_created_at_delta
         cls.max_expires_at_delta = cls.images_config.max_expires_at_delta
         cls.max_updated_at_delta = cls.images_config.max_updated_at_delta
+        cls.tenant_id = cls.access_data.token.tenant.id_
+        cls.third_tenant_id = cls.third_access_data.token.tenant.id_
+
         cls.test_file = cls.read_data_file(cls.images_config.test_file)
+        cls.image_schema_json = cls.read_data_file(
+            cls.images_config.image_schema_json)
+        cls.images_schema_json = cls.read_data_file(
+            cls.images_config.images_schema_json)
+        cls.image_member_schema_json = cls.read_data_file(
+            cls.images_config.image_member_schema_json)
+        cls.image_members_schema_json = cls.read_data_file(
+            cls.images_config.image_members_schema_json)
+        cls.task_schema_json = cls.read_data_file(
+            cls.images_config.task_schema_json)
+        cls.tasks_schema_json = cls.read_data_file(
+            cls.images_config.tasks_schema_json)
 
         cls.addClassCleanup(cls.resources.release)
         cls.addClassCleanup(cls.images_behavior.resources.release)
         cls.addClassCleanup(cls.alt_images_behavior.resources.release)
         cls.addClassCleanup(cls.third_images_behavior.resources.release)
-
-        cls.exception_handler = ExceptionHandler()
-        cls.images_client.add_exception_handler(cls.exception_handler)
 
     @classmethod
     def tearDownClass(cls):
@@ -105,53 +144,6 @@ class ImagesFixture(BaseTestFixture):
         cls.images_behavior.resources.release()
         cls.alt_images_behavior.resources.release()
         cls.third_images_behavior.resources.release()
-        cls.images_client.delete_exception_handler(cls.exception_handler)
-
-    @classmethod
-    def generate_user_list(cls, account_list):
-        """
-        @summary: Generates list of users containing access_data, account
-        types, behaviors, clients, and configurations
-        """
-
-        cls.ACCESS_DATA = "access_data"
-        cls.BEHAVIOR = "behavior"
-        cls.CLIENT = "client"
-        cls.CONFIG = "config"
-        user_list = dict()
-        for user in account_list:
-            user_list[user] = dict()
-            user_list[user][cls.CONFIG] = UserConfig(section_name=user)
-            user_list[user][cls.CONFIG].SECTION_NAME = user
-
-            access_data = AuthProvider.get_access_data(
-                cls.endpoint_config,
-                user_config=user_list[user][cls.CONFIG])
-            # If authentication fails, fail immediately
-            if access_data is None:
-                cls.assertClassSetupFailure('Authentication failed.')
-            user_list[user][cls.ACCESS_DATA] = access_data
-
-            images_service = access_data.get_service(
-                cls.images_config.endpoint_name)
-            images_url_check = images_service.get_endpoint(
-                cls.images_config.region)
-            # If endpoint validation fails, fail immediately
-            if images_url_check is None:
-                cls.assertClassSetupFailure('Endpoint validation failed')
-            cls.url = (images_service.get_endpoint(
-                cls.images_config.region).public_url)
-            # If a url override was provided, use it instead
-            if cls.images_config.override_url:
-                cls.url = cls.images_config.override_url
-
-            images_client = cls.generate_images_client(access_data)
-            user_list[user][cls.CLIENT] = images_client
-
-            images_behavior = ImagesBehaviors(images_client, cls.images_config)
-            user_list[user][cls.BEHAVIOR] = images_behavior
-
-        return user_list
 
     @classmethod
     def generate_images_client(cls, auth_data):
@@ -172,34 +164,6 @@ class ImagesFixture(BaseTestFixture):
             raise file_error
 
         return test_data
-
-    @classmethod
-    def get_comparison_data(cls, data_file):
-        """
-        @summary: Create comparison dictionary based on a given set of data
-        """
-
-        with open(data_file, "r") as DATA:
-            all_data = DATA.readlines()
-
-        comparison_dict = dict()
-        for line in all_data:
-            # Skip any comments or short lines
-            if line.startswith('#') or len(line) < 5:
-                continue
-            # Get the defined data
-            if line.startswith('+'):
-                line = line.replace('+', '')
-                data_columns = [x.strip().lower() for x in line.split('|')]
-                continue
-            # Process the data
-            each_data = dict()
-            data = [x.strip() for x in line.split("|")]
-            for x, y in zip(data_columns[1:], data[1:]):
-                each_data[x] = y
-            comparison_dict[data[0]] = each_data
-
-        return comparison_dict
 
 
 class ComputeIntegrationFixture(ImagesFixture):
