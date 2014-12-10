@@ -45,8 +45,10 @@ class LiveMigratationServerTests(ComputeAdminFixture):
     @tags(type='smoke', net='yes')
     def test_format_and_mount_disks(self):
         """Format and mount ephemeral disks, if any."""
+        if self.images_config.primary_image_default_pass is not None:
+            password = self.images_config.primary_image_default_pass
         remote_client = self.server_behaviors.get_remote_instance_client(
-            self.server, self.servers_config)
+            self.server, self.servers_config, password=password)
 
         # Get all disks and remove the primary disk from the list
         disks = remote_client.get_all_disks()
@@ -73,7 +75,9 @@ class LiveMigratationServerTests(ComputeAdminFixture):
     @tags(type='smoke', net='yes')
     def test_verify_ephemeral_disks_mounted(self):
         """Verify the server's ephemeral disks are still attached."""
+        if self.images_config.primary_image_default_pass is not None:
+            password = self.images_config.primary_image_default_pass
         remote_client = self.server_behaviors.get_remote_instance_client(
-            self.server, self.servers_config)
+            self.server, self.servers_config, password=password)
         for directory in self.test_directories:
             self.assertTrue(remote_client.is_directory_present(directory))
