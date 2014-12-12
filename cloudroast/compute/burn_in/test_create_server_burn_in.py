@@ -36,19 +36,8 @@ class CreateServerBurnIn(ComputeFixture):
     @classmethod
     def setUpClass(cls):
         super(CreateServerBurnIn, cls).setUpClass()
-        name = rand_name("server")
-        networks = None
-        if cls.servers_config.default_network:
-            networks = [{'uuid': cls.servers_config.default_network}]
-        cls.key = cls.keypairs_client.create_keypair(rand_name("key")).entity
-        cls.resources.add(cls.key.name,
-                          cls.keypairs_client.delete_keypair)
-        cls.create_resp = cls.servers_client.create_server(
-            name, cls.image_ref, cls.flavor_ref,
-            key_name=cls.key.name, networks=networks)
-        cls.server = cls.create_resp.entity
-        cls.resources.add(cls.server.id,
-                          cls.servers_client.delete_server)
+        cls.server = cls.server_behaviors.create_active_server().entity
+        cls.resources.add(cls.server.id, cls.servers_client.delete_server)
 
     @tags(type='burn-in', net='no')
     def test_create_server(self):
