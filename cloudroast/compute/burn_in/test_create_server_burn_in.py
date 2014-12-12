@@ -47,7 +47,8 @@ class CreateServerBurnIn(ComputeFixture):
     @tags(type='burn-in', net='yes')
     def test_can_ping_created_server(self):
         server = self.servers_client.get_server(self.server.id).entity
-        server.admin_pass = self.server.admin_pass
+        if self.images_config.primary_image_default_pass is not None:
+            password = self.images_config.primary_image_default_pass
         remote_client = self.server_behaviors.get_remote_instance_client(
-            server, self.servers_config, key=self.key.private_key)
+            server, self.servers_config, password=password)
         self.assertTrue(remote_client.can_authenticate())
