@@ -1,3 +1,5 @@
+# RPCQE NO LONGER MAINTAINS THIS REPOSITORY FOR OPENSTACK TESTING
+
 CloudRoast, CloudCAFE Test Repo
 ================================
 
